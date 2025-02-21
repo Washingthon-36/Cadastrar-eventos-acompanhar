@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Evento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .info {
+            margin-bottom: 10px;
+        }
+        .evento {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Detalhes do Evento</h1>
+    <div id="detalhesEvento"></div>
+    <button onclick="voltar()">Voltar</button>
+    <button onclick="concluirEvento()">Evento Concluído</button>
+    <button onclick="excluirEvento()">Excluir Evento</button>
+
+    <script>
+        const evento = JSON.parse(localStorage.getItem('eventoSelecionado'));
+        let eventos = JSON.parse(localStorage.getItem('eventos')) || [];
+
+        if (evento) {
+            const detalhesEvento = document.getElementById('detalhesEvento');
+            detalhesEvento.innerHTML = `
+                <div class="info"><strong>Nome do Associado:</strong> ${evento.nomeAssociado}</div>
+                <div class="info"><strong>Placa do Veículo:</strong> ${evento.placaVeiculo}</div>
+                <div class="info"><strong>Data de Cadastro do Evento:</strong> ${evento.dataCadastro}</div>
+                <div class="info"><strong>Tipo de Evento:</strong> ${evento.tipoEvento}</div>
+                <div class="info"><strong>Data de Entrega dos Documentos:</strong> ${evento.dataEntregaDocumentos || 'Não confirmada'}</div>
+            `;
+
+            if (evento.dataEntregaDocumentos) {
+                const dataEntrega = new Date(evento.dataEntregaDocumentos);
+                let prazoDias;
+
+                switch (evento.tipoEvento) {
+                    case 'colisao':
+                        prazoDias = 7;
+                        break;
+                    case 'roubo':
+                    case 'furto':
+                        prazoDias = 45;
+                        break;
+                    case 'parabrisa':
+                        prazoDias = 2;
+                        break;
+                    default:
+                        prazoDias = 0;
+                }
+
+                const dataTermino = new Date(dataEntrega);
+                dataTermino.setDate(dataTermino.getDate() + prazoDias);
+
+                detalhesEvento.innerHTML += `<div class="info"><strong>Data de Término:</strong> ${dataTermino.toLocaleDateString()}</div>`;
+            }
+        } else {
+            document.getElementById('detalhesEvento').innerHTML = '<p>Nenhum evento encontrado.</p>';
+        }
+
+        function voltar() {
+            window.location.href = 'index.html';
+        }
+
+        function concluirEvento() {
+            const index = eventos.findIndex(e => e.id === evento.id);
+            if (index !== -1) {
+                eventos[index].concluido = true;
+                localStorage.setItem('eventos', JSON.stringify(eventos));
+                gerarRelatorioPDF(eventos[index]);
+                alert('Evento marcado como concluído e relatório gerado.');
+                window.location.href = 'index.html';
+            }
+        }
+
+        function excluirEvento() {
+            eventos = eventos.filter(e => e.id !== evento.id);
+            localStorage.setItem('eventos', JSON.stringify(eventos));
+            alert('Evento excluído.');
+            window.location.href = 'index.html';
+        }
+
+        function gerarRelatorioPDF(evento) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.text(`Relatório do Evento - ${evento.nomeAssociado}`, 10, 10);
+            doc.text(`Placa do Veículo: ${evento.placaVeiculo}`, 10, 20);
+            doc.text(`Data de Cadastro: ${evento.dataCadastro}`, 10, 30);
+            doc.text(`Tipo de Evento: ${evento.tipoEvento}`, 10, 40);
+            doc.text(`Data de Entrega: ${evento.dataEntregaDocumentos}`, 10, 50);
+
+            doc.save(`relatorio_evento_${evento.id}.pdf`);
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</body>
+</html>
